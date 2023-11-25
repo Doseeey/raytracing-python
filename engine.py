@@ -15,6 +15,7 @@ class Engine:
 
         self.createQuad()
         self.createColorBuffer()
+        self.createResourceMemory()
 
     def createQuad(self):
         #x, y, z, s, t
@@ -53,6 +54,34 @@ class Engine:
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, self.screenWidth, self.screenHeight, 0, GL_RGBA, GL_FLOAT, None)
 
+    def createResourceMemory(self):
+        #center := x, y, z
+        #radius := radius
+        #color := r, g, b
+        #=> (x, y, z, radius), (r, g, b, _)
+
+        sphereData = []
+
+        #allocate space - pass sphere data as 1024x2 image, where every row is 2pixel representation of image as above
+        #1st pixel = (x, y, z, radius)
+        #2nd pixel = (r, g, b, _)
+        for i in range(1024):
+            for attribute in range(8):
+                sphereData.append(0.0)
+            
+        self.sphereData = np.array(sphereData, dtype=np.float32)
+
+        self.sphereDataTexture = glGenTextures(1)
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, self.sphereDataTexture)
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 2, 1024, 0, GL_RGBA, GL_FLOAT, bytes(self.sphereData))
+
     def createShader(self, vertexFilepath, framentFilepath):
         with open(vertexFilepath, 'r') as f:
             vertex_src = f.readlines()
@@ -73,6 +102,17 @@ class Engine:
 
         return shader
     
+    def recordSphere(self, i, _sphere):
+        self.sphereData[8 * i] = _sphere.center[0] #x coord
+        self.sphereData[8 * i + 1] = _sphere.center[1] #y coord
+        self.sphereData[8 * i + 2] = _sphere.center[2] #z coord
+
+        self.sphereData[8 * i + 3] = _sphere.radius
+
+        self.sphereData[8 * i + 4] = _sphere.color[0] #r
+        self.sphereData[8 * i + 5] = _sphere.color[1] #g
+        self.sphereData[8 * i + 6] = _sphere.color[2] #b
+    
     def prepareScene(self, scene):
         glUseProgram(self.rayTracerShader)
 
@@ -87,9 +127,13 @@ class Engine:
 
         #Pass spheres with params
         for i, _sphere in enumerate(scene.spheres):
-            glUniform3fv(glGetUniformLocation(self.rayTracerShader, f"spheres[{i}].center"), 1, _sphere.center)
-            glUniform1f(glGetUniformLocation(self.rayTracerShader, f"spheres[{i}].radius"), _sphere.radius)
-            glUniform3fv(glGetUniformLocation(self.rayTracerShader, f"spheres[{i}].color"), 1, _sphere.color)
+            self.recordSphere(i, _sphere)
+
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, self.sphereDataTexture)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 2, 1024, 0, GL_RGBA, GL_FLOAT, bytes(self.sphereData))
+        glBindImageTexture(1, self.sphereDataTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
+
     
     def renderScene(self, scene):
         glUseProgram(self.rayTracerShader)

@@ -30,12 +30,14 @@ layout(rgba32f, binding = 0) uniform image2D img_output;
 
 //Scene Data
 uniform Camera viewer;
-uniform Sphere spheres[32];
+layout(rgba32f, binding = 1) readonly uniform image2D spheres;
 uniform float sphereCount;
 
 vec3 rayColor(Ray ray);
 
 RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState renderState); 
+
+Sphere unpackSphere(int index);
 
 void main() {
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
@@ -63,7 +65,7 @@ vec3 rayColor(Ray ray) {
     RenderState renderState;
 
     for (int i = 0; i < sphereCount; i++) {
-        renderState = hit(ray, spheres[i], 0.001, nearestHit, renderState);
+        renderState = hit(ray, unpackSphere(i), 0.001, nearestHit, renderState);
 
         if (renderState.hit) {
             nearestHit = renderState.t;
@@ -100,4 +102,17 @@ RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState rend
 
     renderState.hit = false;
     return renderState;
+}
+
+Sphere unpackSphere(int index) {
+    Sphere sphere;
+    
+    vec4 attributeChunk = imageLoad(spheres, ivec2(0, index));
+    sphere.center = attributeChunk.xyz;
+    sphere.radius = attributeChunk.w;
+
+    attributeChunk = imageLoad(spheres, ivec2(1, index));
+    sphere.color = attributeChunk.xyz;
+
+    return sphere;
 }

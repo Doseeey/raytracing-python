@@ -62,25 +62,15 @@ class Engine:
 
         sphereData = []
 
-        #allocate space - pass sphere data as 1024x2 image, where every row is 2pixel representation of image as above
-        #1st pixel = (x, y, z, radius)
-        #2nd pixel = (r, g, b, _)
-        for i in range(1024):
-            for attribute in range(8):
-                sphereData.append(0.0)
-            
-        self.sphereData = np.array(sphereData, dtype=np.float32)
+        #allocate space - pass sphere data as 2 byte buffer
+        #1st byte = (x, y, z, radius)
+        #2nd byte = (r, g, b, _)
+        self.sphereData = np.zeros(1024 * 8, dtype=np.float32)
 
-        self.sphereDataTexture = glGenTextures(1)
-        glActiveTexture(GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_2D, self.sphereDataTexture)
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 2, 1024, 0, GL_RGBA, GL_FLOAT, bytes(self.sphereData))
+        self.sphereDataBuffer = glGenBuffers(1)
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, self.sphereDataBuffer)
+        glBufferData(GL_SHADER_STORAGE_BUFFER, self.sphereData.nbytes, self.sphereData, GL_DYNAMIC_READ)
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, self.sphereDataBuffer)
 
     def createShader(self, vertexFilepath, framentFilepath):
         with open(vertexFilepath, 'r') as f:
@@ -129,10 +119,9 @@ class Engine:
         for i, _sphere in enumerate(scene.spheres):
             self.recordSphere(i, _sphere)
 
-        glActiveTexture(GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_2D, self.sphereDataTexture)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 2, 1024, 0, GL_RGBA, GL_FLOAT, bytes(self.sphereData))
-        glBindImageTexture(1, self.sphereDataTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, self.sphereDataBuffer)
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 8 * 4 * len(scene.spheres), self.sphereData)
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, self.sphereDataBuffer)
 
     
     def renderScene(self, scene):
@@ -143,7 +132,7 @@ class Engine:
         glActiveTexture(GL_TEXTURE0)
         glBindImageTexture(0, self.colorBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F)
 
-        glDispatchCompute(self.screenWidth, self.screenHeight, 1)
+        glDispatchCompute(int(self.screenWidth/8), int(self.screenHeight/8), 1)
 
         #assert writing to image is done before read
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)

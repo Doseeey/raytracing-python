@@ -73,8 +73,28 @@ class Engine:
 
         return shader
     
-    def renderScene(self):
+    def prepareScene(self, scene):
         glUseProgram(self.rayTracerShader)
+
+        #Pass camera params to program
+        glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.position"), 1, scene.camera.position)
+        glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.forwards"), 1, scene.camera.forwards)
+        glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.right"), 1, scene.camera.right)
+        glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.up"), 1, scene.camera.up)
+
+        #Pass number of spheres to program
+        glUniform1f(glGetUniformLocation(self.rayTracerShader, "sphereCount"), len(scene.spheres))
+
+        #Pass spheres with params
+        for i, _sphere in enumerate(scene.spheres):
+            glUniform3fv(glGetUniformLocation(self.rayTracerShader, f"spheres[{i}].center"), 1, _sphere.center)
+            glUniform1f(glGetUniformLocation(self.rayTracerShader, f"spheres[{i}].radius"), _sphere.radius)
+            glUniform3fv(glGetUniformLocation(self.rayTracerShader, f"spheres[{i}].color"), 1, _sphere.color)
+    
+    def renderScene(self, scene):
+        glUseProgram(self.rayTracerShader)
+
+        self.prepareScene(scene)
 
         glActiveTexture(GL_TEXTURE0)
         glBindImageTexture(0, self.colorBuffer, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F)

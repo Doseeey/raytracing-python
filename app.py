@@ -1,5 +1,6 @@
 from config import *
 import engine
+import scene
 
 class App:
     def __init__(self):
@@ -14,6 +15,7 @@ class App:
         
         pg.display.set_mode((self.screenWidth, self.screenHeight), pg.OPENGL|pg.DOUBLEBUF)
         self.graphicsEngine = engine.Engine(self.screenWidth, self.screenHeight)
+        self.scene = scene.Scene()
 
         self.lastTime = pg.time.get_ticks()
         self.currentTime = 0
@@ -36,7 +38,7 @@ class App:
                         running == False
 
             #Render
-            self.graphicsEngine.renderScene()
+            self.graphicsEngine.renderScene(self.scene)
 
             #Timing
             self.calculateFramerate()

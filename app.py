@@ -36,6 +36,29 @@ class App:
                 if (event.type == pg.KEYDOWN):
                     if (event.key == pg.K_ESCAPE):
                         running == False
+                if (event.type == pg.MOUSEMOTION):
+                    pos = pg.mouse.get_pos()
+                    angle = 90
+                    newTheta = (pos[0]/self.screenWidth*angle) - angle/2
+                    newPhi = (pos[1]/self.screenHeight*angle) - angle/2
+                    self.scene.camera.updateVectors(newTheta, newPhi)
+            
+            #Camera movement
+            travelSpeed = 0.1
+            keys = pg.key.get_pressed()
+            if keys[pg.K_UP] or keys[pg.K_w]:
+                self.scene.camera.position[0] += travelSpeed
+            if keys[pg.K_DOWN] or keys[pg.K_s]:
+                self.scene.camera.position[0] -= travelSpeed
+            if keys[pg.K_LEFT] or keys[pg.K_a]:
+                self.scene.camera.position[1] += travelSpeed
+            if keys[pg.K_RIGHT] or keys[pg.K_d]:
+                self.scene.camera.position[1] -= travelSpeed
+            if keys[pg.K_SPACE]:
+                self.scene.camera.position[2] += travelSpeed
+            if keys[pg.K_LSHIFT]:
+                self.scene.camera.position[2] -= travelSpeed
+
 
             #Render
             self.graphicsEngine.renderScene(self.scene)

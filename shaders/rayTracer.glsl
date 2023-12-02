@@ -58,7 +58,7 @@ void main() {
 
 vec3 rayColor(Ray ray) {
     //Returns sphere color if ray hit the sphere, otherwise return black
-    vec3 color = vec3(0.0);
+    vec3 color = vec3(1.0);
 
     float nearestHit = 99999999;
     bool hitSomething = false;

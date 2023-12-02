@@ -60,17 +60,32 @@ class Engine:
         #color := r, g, b
         #=> (x, y, z, radius), (r, g, b, _)
 
-        sphereData = []
+        # sphereData = []
 
         #allocate space - pass sphere data as 2 byte buffer
         #1st byte = (x, y, z, radius)
         #2nd byte = (r, g, b, _)
-        self.sphereData = np.zeros(1024 * 8, dtype=np.float32)
 
-        self.sphereDataBuffer = glGenBuffers(1)
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, self.sphereDataBuffer)
-        glBufferData(GL_SHADER_STORAGE_BUFFER, self.sphereData.nbytes, self.sphereData, GL_DYNAMIC_READ)
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, self.sphereDataBuffer)
+        #sphere := (x, y, z, radius) (r, g, b, _) (_, _, _, _) (_, _, _, _) (_, _, _, _)
+        #plane  := (x, y, z, tx) (ty, tz, bx, by) (bz, nx, ny, nz) (umin, umax, vmin, vmax) (r, g, b, _)
+        # for i in range(1024):
+        #     for attribute in range(20):
+        #         sphereData.append(0.0)
+
+        objectData = np.zeros(1024*8, dtype=np.float32)
+
+        self.objectData = np.array(objectData, dtype=np.float32)
+
+        self.objectDataTexture = glGenTextures(1)
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, self.objectDataTexture)
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 5, 1024, 0, GL_RGBA, GL_FLOAT, bytes(self.objectData))
 
     def createShader(self, vertexFilepath, framentFilepath):
         with open(vertexFilepath, 'r') as f:
@@ -93,16 +108,70 @@ class Engine:
         return shader
     
     def recordSphere(self, i, _sphere):
-        self.sphereData[8 * i] = _sphere.center[0] #x coord
-        self.sphereData[8 * i + 1] = _sphere.center[1] #y coord
-        self.sphereData[8 * i + 2] = _sphere.center[2] #z coord
+        #sphere := (x, y, z, radius) (r, g, b, _) (_, _, _, _) (_, _, _, _) (_, _, _, _)
 
-        self.sphereData[8 * i + 3] = _sphere.radius
+        self.objectData[20 * i] = _sphere.center[0] #x coord
+        self.objectData[20 * i + 1] = _sphere.center[1] #y coord
+        self.objectData[20 * i + 2] = _sphere.center[2] #z coord
 
-        self.sphereData[8 * i + 4] = _sphere.color[0] #r
-        self.sphereData[8 * i + 5] = _sphere.color[1] #g
-        self.sphereData[8 * i + 6] = _sphere.color[2] #b
+        self.objectData[20 * i + 3] = _sphere.radius
+
+        self.objectData[20 * i + 4] = _sphere.color[0] #r
+        self.objectData[20 * i + 5] = _sphere.color[1] #g
+        self.objectData[20 * i + 6] = _sphere.color[2] #b
+
+    def recordPlane(self, i, _plane):
+        #plane  := (x, y, z, tx) (ty, tz, bx, by) (bz, nx, ny, nz) (umin, umax, vmin, vmax) (r, g, b, _)
+        
+        self.objectData[20 * i] = _plane.center[0] #x coord
+        self.objectData[20 * i + 1] = _plane.center[1] #y coord
+        self.objectData[20 * i + 2] = _plane.center[2] #z cord
+
+        self.objectData[20 * i + 3] = _plane.tangent[0] #x tang
+        self.objectData[20 * i + 4] = _plane.tangent[1] #y tang
+        self.objectData[20 * i + 5] = _plane.tangent[2] #z tang
+
+        self.objectData[20 * i + 6] = _plane.bitangent[0] #x bitang
+        self.objectData[20 * i + 7] = _plane.bitangent[1] #y bitang
+        self.objectData[20 * i + 8] = _plane.bitangent[2] #z bitang
+
+        self.objectData[20 * i + 9] = _plane.normal[0] #x normal
+        self.objectData[20 * i + 10] = _plane.normal[1] #y normal
+        self.objectData[20 * i + 11] = _plane.normal[2] #z normal
+
+        self.objectData[20 * i + 12] = _plane.uMin 
+        self.objectData[20 * i + 13] = _plane.uMax
+        self.objectData[20 * i + 14] = _plane.vMin
+        self.objectData[20 * i + 15] = _plane.vMax 
+
+        self.objectData[20 * i + 16] = _plane.color[0] #r
+        self.objectData[20 * i + 17] = _plane.color[1] #g
+        self.objectData[20 * i + 18] = _plane.color[2] #b 
     
+    def updateScene(self, scene):
+        scene.outDated = False
+        glUseProgram(self.rayTracerShader)
+
+        #Pass number of spheres to program
+        glUniform1f(glGetUniformLocation(self.rayTracerShader, "sphereCount"), len(scene.spheres))
+
+        #Pass spheres with params
+        for i, _sphere in enumerate(scene.spheres):
+            self.recordSphere(i, _sphere)
+
+        #Pass number of planes to program
+        glUniform1f(glGetUniformLocation(self.rayTracerShader, "planeCount"), len(scene.planes))
+        sphereOffset = len(scene.spheres)
+        #Pass planes with params
+        for i, _plane in enumerate(scene.planes):
+            self.recordPlane(i + sphereOffset, _plane)
+
+        glActiveTexture(GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, self.objectDataTexture)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 5, 1024, 0, GL_RGBA, GL_FLOAT, bytes(self.objectData))
+        
+        
+
     def prepareScene(self, scene):
         glUseProgram(self.rayTracerShader)
 
@@ -112,16 +181,11 @@ class Engine:
         glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.right"), 1, scene.camera.right)
         glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.up"), 1, scene.camera.up)
 
-        #Pass number of spheres to program
-        glUniform1f(glGetUniformLocation(self.rayTracerShader, "sphereCount"), len(scene.spheres))
+        if scene.outDated:
+            self.updateScene(scene)
 
-        #Pass spheres with params
-        for i, _sphere in enumerate(scene.spheres):
-            self.recordSphere(i, _sphere)
-
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, self.sphereDataBuffer)
-        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 8 * 4 * len(scene.spheres), self.sphereData)
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, self.sphereDataBuffer)
+        glActiveTexture(GL_TEXTURE1)
+        glBindImageTexture(1, self.objectDataTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
 
     
     def renderScene(self, scene):

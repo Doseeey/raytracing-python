@@ -1,5 +1,6 @@
 from config import *
 import sphere
+import plane
 import camera
 
 class Scene:
@@ -21,5 +22,25 @@ class Scene:
         ]
 
         self.camera = camera.Camera(
-            position= [0, 0, 0]
+            position= [-5, 0, 0]
         )
+
+        self.planes = [
+            plane.Plane(
+                normal = [0, 0, 1],
+                tangent= [1, 0, 0],
+                bitangent= [0, 1, 0],
+                uMin = -10,
+                uMax = 10,
+                vMin = -10,
+                vMax = 10,
+                center = [0, 0, -7],
+                color = [
+                    np.random.uniform(low = 0.3, high = 1.0),
+                    np.random.uniform(low = 0.3, high = 1.0),
+                    np.random.uniform(low = 0.3, high = 1.0)
+                ]
+            ),
+        ]
+
+        self.outDated = True

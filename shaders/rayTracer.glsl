@@ -18,6 +18,18 @@ struct Ray {
     vec3 direction;
 };
 
+struct Plane {
+    vec3 center;
+    vec3 tangent;
+    vec3 bitangent;
+    vec3 normal;
+    float uMin;
+    float uMax;
+    float vMin;
+    float vMax;
+    vec3 color;
+};
+
 struct RenderState {
     float t;
     vec3 color;
@@ -30,14 +42,19 @@ layout(rgba32f, binding = 0) uniform image2D img_output;
 
 //Scene Data
 uniform Camera viewer;
-layout(std430, binding = 1) readonly buffer sceneData {
-    Sphere[] spheres;
-};
+layout(rgba32f, binding = 1) readonly uniform image2D objects;
 uniform float sphereCount;
+uniform float planeCount;
 
 vec3 rayColor(Ray ray);
 
 RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState renderState); 
+
+RenderState hit(Ray ray, Plane plane, float tMin, float tMax, RenderState renderState); 
+
+Sphere unpackSphere(int index);
+
+Plane unpackPlane(int index);
 
 void main() {
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
@@ -65,7 +82,16 @@ vec3 rayColor(Ray ray) {
     RenderState renderState;
 
     for (int i = 0; i < sphereCount; i++) {
-        renderState = hit(ray, spheres[i], 0.001, nearestHit, renderState);
+        renderState = hit(ray, unpackSphere(i), 0.001, nearestHit, renderState);
+
+        if (renderState.hit) {
+            nearestHit = renderState.t;
+            hitSomething = true;
+        }
+    }
+
+    for (int i = int(sphereCount); i < sphereCount + planeCount; i++) {
+        renderState = hit(ray, unpackPlane(i), 0.001, nearestHit, renderState);
 
         if (renderState.hit) {
             nearestHit = renderState.t;
@@ -102,4 +128,75 @@ RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState rend
 
     renderState.hit = false;
     return renderState;
+}
+
+RenderState hit(Ray ray, Plane plane, float tMin, float tMax, RenderState renderState) {
+    //dot(normal, direction) =/= 0 i ujemny!!!
+    
+    float denominator = dot(plane.normal, ray.direction);
+
+    if (denominator < -0.00001) {
+        float t = dot(plane.center - ray.origin, plane.normal) / denominator;
+
+        if (t > tMin && t < tMax) {
+            vec3 testPoint = ray.origin + t * ray.direction;
+            vec3 testDirection = testPoint - plane.center;
+
+            float u = dot(testDirection, plane.tangent);
+            float v = dot(testDirection, plane.bitangent);
+
+            if (u > plane.uMin && u < plane.uMax && v > plane.vMin && v < plane.vMax) {
+                renderState.t = t;
+                renderState.color = plane.color;
+                renderState.hit = true;
+                return renderState;
+            }
+        }
+    }
+
+    renderState.hit = false;
+    return renderState;
+}
+
+
+Sphere unpackSphere(int index) {
+    //sphere := (x, y, z, radius) (r, g, b, _) (_, _, _, _) (_, _, _, _) (_, _, _, _)
+    Sphere sphere;
+
+    vec4 attributeChunk = imageLoad(objects, ivec2(0, index));
+    sphere.center = attributeChunk.xyz;
+    sphere.radius = attributeChunk.w;
+
+    attributeChunk = imageLoad(objects, ivec2(1, index));
+    sphere.color = attributeChunk.xyz;
+
+    return sphere;
+}
+
+Plane unpackPlane(int index) {
+    //plane  := (x, y, z, tx) (ty, tz, bx, by) (bz, nx, ny, nz) (umin, umax, vmin, vmax) (r, g, b, _)
+    Plane plane;
+
+    vec4 attributeChunk = imageLoad(objects, ivec2(0, index));
+    plane.center = attributeChunk.xyz;
+    plane.tangent.x = attributeChunk.w;
+
+    attributeChunk = imageLoad(objects, ivec2(1, index));
+    plane.tangent.yz = attributeChunk.xy;
+    plane.bitangent.xy = attributeChunk.zw;
+
+    attributeChunk = imageLoad(objects, ivec2(2, index));
+    plane.bitangent.z = attributeChunk.x;
+    plane.normal = attributeChunk.yzw;
+
+    attributeChunk = imageLoad(objects, ivec2(3, index));
+    plane.uMin = attributeChunk.x;
+    plane.uMax = attributeChunk.y;
+    plane.vMin = attributeChunk.z;
+    plane.vMax = attributeChunk.w;
+
+    attributeChunk = imageLoad(objects, ivec2(4, index));
+    plane.color = attributeChunk.xyz;
+
+    return plane;
 }

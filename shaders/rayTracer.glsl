@@ -34,6 +34,8 @@ struct RenderState {
     float t;
     vec3 color;
     bool hit;
+    vec3 position; //where ray hit
+    vec3 normal;
 };
 
 // input/output
@@ -46,7 +48,7 @@ layout(rgba32f, binding = 1) readonly uniform image2D objects;
 uniform float sphereCount;
 uniform float planeCount;
 
-vec3 rayColor(Ray ray);
+RenderState trace(Ray ray);
 
 RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState renderState); 
 
@@ -68,42 +70,50 @@ void main() {
     ray.direction = viewer.forwards + horizontalCoefficient * viewer.right +  verticalCoefficient * viewer.up; 
 
     // Find color of pixel, where ray is shooting
-    vec3 pixel = rayColor(ray);
+    vec3 pixel = vec3(1.0);
+    
+    for (int i = 0; i < 3; i++) {
+        RenderState renderState = trace(ray);
+
+        if (!renderState.hit) {
+            break;
+        }
+
+        pixel = pixel * renderState.color;
+
+        ray.origin = renderState.position;
+        ray.direction = reflect(ray.direction, renderState.normal);
+    }
 
     imageStore(img_output, pixel_coords, vec4(pixel, 1.0));
 }
 
-vec3 rayColor(Ray ray) {
-    //Returns sphere color if ray hit the sphere, otherwise return black
-    vec3 color = vec3(0.0);
+RenderState trace(Ray ray) {
+    //Returns sphere color if ray hit the sphere
 
     float nearestHit = 99999999;
-    bool hitSomething = false;
     RenderState renderState;
+    renderState.hit = false;
 
     for (int i = 0; i < sphereCount; i++) {
-        renderState = hit(ray, unpackSphere(i), 0.001, nearestHit, renderState);
+        RenderState newRenderState = hit(ray, unpackSphere(i), 0.001, nearestHit, renderState);
 
-        if (renderState.hit) {
-            nearestHit = renderState.t;
-            hitSomething = true;
+        if (newRenderState.hit) {
+            nearestHit = newRenderState.t;
+            renderState = newRenderState;
         }
     }
 
     for (int i = int(sphereCount); i < sphereCount + planeCount; i++) {
-        renderState = hit(ray, unpackPlane(i), 0.001, nearestHit, renderState);
+        RenderState newRenderState = hit(ray, unpackPlane(i), 0.001, nearestHit, renderState);
 
-        if (renderState.hit) {
-            nearestHit = renderState.t;
-            hitSomething = true;
+        if (newRenderState.hit) {
+            nearestHit = newRenderState.t;
+            renderState = newRenderState;
         }
     }
 
-    if (hitSomething) {
-        color = renderState.color;
-    }
-
-    return color;
+    return renderState;
 }
 
 RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState renderState) {
@@ -119,6 +129,9 @@ RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState rend
         float t = (-b - sqrt(delta)) / (2 * a); //-sqrt(delta) bedzie blizsze viewera, dlatego tylko to jest istotne
 
         if (t > tMin && t < tMax) {
+
+            renderState.position = ray.origin + t * ray.direction;
+            renderState.normal = normalize(renderState.position - sphere.center);
             renderState.t = t;
             renderState.color = sphere.color;
             renderState.hit = true;
@@ -131,11 +144,13 @@ RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState rend
 }
 
 RenderState hit(Ray ray, Plane plane, float tMin, float tMax, RenderState renderState) {
-    //dot(normal, direction) =/= 0 i ujemny!!!
+    //wyznacznik musi byc rozny od 0 
+    //ujemny wyznacznik := plaszczyzna widoczna od wewnatrz
+    //dodatni wyznacznik := plaszczyzna widoczna od zewnatrz
     
     float denominator = dot(plane.normal, ray.direction);
 
-    if (denominator < -0.00001) {
+    if (denominator != 0) {
         float t = dot(plane.center - ray.origin, plane.normal) / denominator;
 
         if (t > tMin && t < tMax) {
@@ -146,6 +161,8 @@ RenderState hit(Ray ray, Plane plane, float tMin, float tMax, RenderState render
             float v = dot(testDirection, plane.bitangent);
 
             if (u > plane.uMin && u < plane.uMax && v > plane.vMin && v < plane.vMax) {
+                renderState.position = testPoint;
+                renderState.normal = plane.normal;
                 renderState.t = t;
                 renderState.color = plane.color;
                 renderState.hit = true;

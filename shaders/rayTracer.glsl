@@ -4,6 +4,7 @@ struct Sphere {
     vec3 center;
     float radius;
     vec3 color;
+    float prop;
 };
 
 struct Camera {
@@ -36,6 +37,7 @@ struct RenderState {
     bool hit;
     vec3 position; //where ray hit
     vec3 normal;
+    float prop;
 };
 
 // input/output
@@ -71,8 +73,7 @@ void main() {
 
     // Find color of pixel, where ray is shooting
     vec3 pixel = vec3(1.0);
-    
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 5; i++) {
         RenderState renderState = trace(ray);
 
         if (!renderState.hit) {
@@ -81,8 +82,14 @@ void main() {
 
         pixel = pixel * renderState.color;
 
+        if (renderState.prop == 1 && renderState.hit) {
+            break;
+        }
+
         ray.origin = renderState.position;
         ray.direction = reflect(ray.direction, renderState.normal);
+
+        
     }
 
     imageStore(img_output, pixel_coords, vec4(pixel, 1.0));
@@ -135,6 +142,11 @@ RenderState hit(Ray ray, Sphere sphere, float tMin, float tMax, RenderState rend
             renderState.t = t;
             renderState.color = sphere.color;
             renderState.hit = true;
+            if (sphere.prop == 1) {
+                renderState.prop = 1;
+            } else {
+                renderState.prop = 0;
+            }
             return renderState;
         }
     }
@@ -177,7 +189,7 @@ RenderState hit(Ray ray, Plane plane, float tMin, float tMax, RenderState render
 
 
 Sphere unpackSphere(int index) {
-    //sphere := (x, y, z, radius) (r, g, b, _) (_, _, _, _) (_, _, _, _) (_, _, _, _)
+    //sphere := (x, y, z, radius) (r, g, b, prop) (_, _, _, _) (_, _, _, _) (_, _, _, _)
     Sphere sphere;
 
     vec4 attributeChunk = imageLoad(objects, ivec2(0, index));
@@ -186,6 +198,7 @@ Sphere unpackSphere(int index) {
 
     attributeChunk = imageLoad(objects, ivec2(1, index));
     sphere.color = attributeChunk.xyz;
+    sphere.prop = attributeChunk.w;
 
     return sphere;
 }

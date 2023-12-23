@@ -108,7 +108,7 @@ class Engine:
         return shader
     
     def recordSphere(self, i, _sphere):
-        #sphere := (x, y, z, radius) (r, g, b, _) (_, _, _, _) (_, _, _, _) (_, _, _, _)
+        #sphere := (x, y, z, radius) (r, g, b, prop) (_, _, _, _) (_, _, _, _) (_, _, _, _)
 
         self.objectData[20 * i] = _sphere.center[0] #x coord
         self.objectData[20 * i + 1] = _sphere.center[1] #y coord
@@ -119,6 +119,7 @@ class Engine:
         self.objectData[20 * i + 4] = _sphere.color[0] #r
         self.objectData[20 * i + 5] = _sphere.color[1] #g
         self.objectData[20 * i + 6] = _sphere.color[2] #b
+        self.objectData[20 * i + 7] = _sphere.prop #prop
 
     def recordPlane(self, i, _plane):
         #plane  := (x, y, z, tx) (ty, tz, bx, by) (bz, nx, ny, nz) (umin, umax, vmin, vmax) (r, g, b, _)

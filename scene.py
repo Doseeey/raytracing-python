@@ -17,7 +17,8 @@ class Scene:
                     np.random.uniform(low = 0.3, high = 1.0),
                     np.random.uniform(low = 0.3, high = 1.0),
                     np.random.uniform(low = 0.3, high = 1.0)
-                ]
+                ],
+                prop = np.random.randint(2)
             ) for i in range(128)
         ]
 

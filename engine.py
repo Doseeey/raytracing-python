@@ -1,4 +1,5 @@
 from config import *
+import materials
 
 class Engine:
     def __init__(self, width, height):
@@ -16,6 +17,9 @@ class Engine:
         self.createQuad()
         self.createColorBuffer()
         self.createResourceMemory()
+        self.skyBoxMaterial = materials.CubeMapMaterial("gfx/sky")
+        glUseProgram(self.rayTracerShader)
+        glUniform1i(glGetUniformLocation(self.rayTracerShader, "sky_cube"), 3)
 
     def createQuad(self):
         #x, y, z, s, t
@@ -187,6 +191,7 @@ class Engine:
         glActiveTexture(GL_TEXTURE1)
         glBindImageTexture(1, self.objectDataTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)
 
+        self.skyBoxMaterial.use()
     
     def renderScene(self, scene):
         glUseProgram(self.rayTracerShader)

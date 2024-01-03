@@ -45,6 +45,7 @@ layout(rgba32f, binding = 0) uniform image2D img_output;
 //Scene Data
 uniform Camera viewer;
 layout(rgba32f, binding = 1) readonly uniform image2D objects;
+uniform samplerCube sky_cube;
 uniform float sphereCount;
 uniform float planeCount;
 
@@ -71,21 +72,25 @@ void main() {
 
     // Find color of pixel, where ray is shooting
     vec3 pixel = vec3(1.0);
+    vec3 finalColor = vec3(0.0);
     
-    for (int i = 0; i < 3; i++) {
-        RenderState renderState = trace(ray);
+    RenderState renderState;
+    for (int i = 0; i < 4; i++) {
+        renderState = trace(ray);
+
+        pixel = pixel * renderState.color;
 
         if (!renderState.hit) {
             break;
         }
 
-        pixel = pixel * renderState.color;
-
         ray.origin = renderState.position;
         ray.direction = reflect(ray.direction, renderState.normal);
     }
 
-    imageStore(img_output, pixel_coords, vec4(pixel, 1.0));
+    finalColor = pixel;
+
+    imageStore(img_output, pixel_coords, vec4(finalColor, 1.0));
 }
 
 RenderState trace(Ray ray) {
@@ -93,6 +98,7 @@ RenderState trace(Ray ray) {
 
     float nearestHit = 99999999;
     RenderState renderState;
+    renderState.color = vec3(texture(sky_cube, ray.direction));
     renderState.hit = false;
 
     for (int i = 0; i < sphereCount; i++) {

@@ -38,29 +38,29 @@ class App:
                         running == False
 
             #Camera movement
-            # travelSpeed = 0.1
-            # rotateSpeed = 1
-            # keys = pg.key.get_pressed()
-            # if keys[pg.K_w]:
-            #     self.scene.camera.position[0] += travelSpeed
-            # if keys[pg.K_s]:
-            #     self.scene.camera.position[0] -= travelSpeed
-            # if keys[pg.K_a]:
-            #     self.scene.camera.position[1] += travelSpeed
-            # if keys[pg.K_d]:
-            #     self.scene.camera.position[1] -= travelSpeed
-            # if keys[pg.K_SPACE]:
-            #     self.scene.camera.position[2] += travelSpeed
-            # if keys[pg.K_LSHIFT]:
-            #     self.scene.camera.position[2] -= travelSpeed
-            # if keys[pg.K_UP]:
-            #     self.scene.camera.updateVectors(self.scene.camera.theta, self.scene.camera.phi+rotateSpeed)
-            # if keys[pg.K_DOWN]:
-            #     self.scene.camera.updateVectors(self.scene.camera.theta, self.scene.camera.phi-rotateSpeed)
-            # if keys[pg.K_LEFT]:
-            #     self.scene.camera.updateVectors(self.scene.camera.theta+rotateSpeed, self.scene.camera.phi)
-            # if keys[pg.K_RIGHT]:
-            #     self.scene.camera.updateVectors(self.scene.camera.theta-rotateSpeed, self.scene.camera.phi)
+            travelSpeed = 0.1
+            rotateSpeed = 1
+            keys = pg.key.get_pressed()
+            if keys[pg.K_w]:
+                self.scene.camera.position[0] += travelSpeed
+            if keys[pg.K_s]:
+                self.scene.camera.position[0] -= travelSpeed
+            if keys[pg.K_a]:
+                self.scene.camera.position[1] += travelSpeed
+            if keys[pg.K_d]:
+                self.scene.camera.position[1] -= travelSpeed
+            if keys[pg.K_SPACE]:
+                self.scene.camera.position[2] += travelSpeed
+            if keys[pg.K_LSHIFT]:
+                self.scene.camera.position[2] -= travelSpeed
+            if keys[pg.K_UP]:
+                self.scene.camera.updateVectors(self.scene.camera.theta, self.scene.camera.phi+rotateSpeed)
+            if keys[pg.K_DOWN]:
+                self.scene.camera.updateVectors(self.scene.camera.theta, self.scene.camera.phi-rotateSpeed)
+            if keys[pg.K_LEFT]:
+                self.scene.camera.updateVectors(self.scene.camera.theta+rotateSpeed, self.scene.camera.phi)
+            if keys[pg.K_RIGHT]:
+                self.scene.camera.updateVectors(self.scene.camera.theta-rotateSpeed, self.scene.camera.phi)
             #Render
             self.graphicsEngine.renderScene(self.scene)
 

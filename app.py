@@ -39,24 +39,34 @@ class App:
 
             #Camera movement
             travelSpeed = 0.1
-            rotateSpeed = 1
+            rotateSpeed = 0.7
             keys = pg.key.get_pressed()
             if keys[pg.K_w]:
-                self.scene.camera.position[0] += travelSpeed
+                self.scene.camera.position[0] += self.scene.camera.forwards[0] * travelSpeed
+                self.scene.camera.position[1] += self.scene.camera.forwards[1] * travelSpeed
+                self.scene.camera.position[2] += self.scene.camera.forwards[2] * travelSpeed
             if keys[pg.K_s]:
-                self.scene.camera.position[0] -= travelSpeed
+                self.scene.camera.position[0] -= self.scene.camera.forwards[0] * travelSpeed
+                self.scene.camera.position[1] -= self.scene.camera.forwards[1] * travelSpeed
+                self.scene.camera.position[2] -= self.scene.camera.forwards[2] * travelSpeed
             if keys[pg.K_a]:
-                self.scene.camera.position[1] += travelSpeed
+                self.scene.camera.position[0] -= self.scene.camera.right[0] * travelSpeed
+                self.scene.camera.position[1] -= self.scene.camera.right[1] * travelSpeed
+                self.scene.camera.position[2] -= self.scene.camera.right[2] * travelSpeed
             if keys[pg.K_d]:
-                self.scene.camera.position[1] -= travelSpeed
+                self.scene.camera.position[0] += self.scene.camera.right[0] * travelSpeed
+                self.scene.camera.position[1] += self.scene.camera.right[1] * travelSpeed
+                self.scene.camera.position[2] += self.scene.camera.right[2] * travelSpeed
             if keys[pg.K_SPACE]:
                 self.scene.camera.position[2] += travelSpeed
             if keys[pg.K_LSHIFT]:
                 self.scene.camera.position[2] -= travelSpeed
             if keys[pg.K_UP]:
-                self.scene.camera.updateVectors(self.scene.camera.theta, self.scene.camera.phi+rotateSpeed)
+                if self.scene.camera.phi < 75:
+                    self.scene.camera.updateVectors(self.scene.camera.theta, self.scene.camera.phi+rotateSpeed)
             if keys[pg.K_DOWN]:
-                self.scene.camera.updateVectors(self.scene.camera.theta, self.scene.camera.phi-rotateSpeed)
+                if self.scene.camera.phi > -75:
+                    self.scene.camera.updateVectors(self.scene.camera.theta, self.scene.camera.phi-rotateSpeed)
             if keys[pg.K_LEFT]:
                 self.scene.camera.updateVectors(self.scene.camera.theta+rotateSpeed, self.scene.camera.phi)
             if keys[pg.K_RIGHT]:
